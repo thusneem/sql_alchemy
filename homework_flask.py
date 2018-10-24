@@ -23,7 +23,7 @@ Measurement = Base.classes.measurement
 Station = Base.classes.station
 
 # Create our session (link) from Python to the DB
-session = Session(engine)
+
 
 #################################################
 # Flask Setup
@@ -41,15 +41,16 @@ def welcome():
     return (
         f"Welcome to Climate App <br/>"
         f"Available Routes:<br/>"
-        f"/api/v1.0/precipitation<br/>"
+        f"/api/v1.0/percipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
         f"/api/v1.0/start/end"
     )
 
 
-@app.route("/api/v1.0/precipitation")
-def precipitation():
+@app.route("/api/v1.0/percipitation")
+def percipitation():
+    session = Session(engine)
     """Return a list of all """
     percipitation_data = session.query(Measurement.date,Measurement.prcp).\
                         filter(Measurement.date <= '2017-08-23').\
@@ -66,6 +67,7 @@ def precipitation():
 
 @app.route("/api/v1.0/stations")
 def stations():
+    session = Session(engine)
     active_stations =session.query(Measurement.station,func.count(Measurement.station)).\
                               group_by(Measurement.station).\
                               order_by(func.count(Measurement.station).desc()).all()
@@ -76,6 +78,7 @@ def stations():
 @app.route("/api/v1.0/tobs")
 def tobs():
     # Query all tobs
+    session = Session(engine)
     temp_obs_lastyear=session.query(Measurement.date,Measurement.tobs).\
                      filter( Measurement.date <= '2017-08-23').\
                      filter( Measurement.date >= '2016-08-23').\
@@ -85,11 +88,12 @@ def tobs():
     
     return jsonify(all_tobs)
 
-@app.route("/api/v1.0/start/end")
-def start_end():
+@app.route("/api/v1.0/<start>/<end>")
+def start_end(start,end):
+    session = Session(engine)
     func_prv_year= session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).\
-            filter(Measurement.date >='2017-02-28').\
-            filter(Measurement.date <= '2017-03-05').all()
+            filter(Measurement.date >= start).\
+            filter(Measurement.date <= end).all()
     
     all_trip = list(np.ravel(func_prv_year))
     return jsonify(all_trip)
